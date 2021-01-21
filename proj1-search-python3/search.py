@@ -18,6 +18,8 @@ Pacman agents (in searchAgents.py).
 """
 
 import util
+from util import *
+
 
 class SearchProblem:
     """
@@ -86,18 +88,80 @@ def depthFirstSearch(problem):
     print("Is the start a goal?", problem.isGoalState(problem.getStartState()))
     print("Start's successors:", problem.getSuccessors(problem.getStartState()))
     """
-    "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    startState = problem.getStartState()
+    s = Stack()
+    s.push((startState, []))
+    visited = set()
+    while not s.isEmpty():
+        current_path = s.pop()
+        current_state = current_path[0]
+        path_to_curr_state = current_path[1]
+        if problem.isGoalState(current_state):
+            return path_to_curr_state
+        if current_state in visited:
+            continue
+        successors = problem.getSuccessors(current_state)
+        for successor in successors:
+            successor_state = successor[0]
+            successor_direction = successor[1]
+            new_directions = list(path_to_curr_state)
+            new_directions.append(successor_direction)
+            s.push((successor_state, new_directions))
+        visited.add(current_state)
+    raise Exception("Searched the maze but did not find the goal")
+
+
 
 def breadthFirstSearch(problem):
     """Search the shallowest nodes in the search tree first."""
-    "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    startState = problem.getStartState()
+    s = Queue()
+    s.push((startState, []))
+    visited = set()
+    i = 1
+    while not s.isEmpty():
+        current_path = s.pop()
+        current_state = current_path[0]
+        path_to_curr_state = current_path[1]
+        if problem.isGoalState(current_state):
+            return path_to_curr_state
+        if current_state in visited:
+            continue
+        successors = problem.getSuccessors(current_state)
+        for successor in successors:
+            successor_state = successor[0]
+            successor_direction = successor[1]
+            new_directions = list(path_to_curr_state)
+            new_directions.append(successor_direction)
+            s.push((successor_state, new_directions))
+        visited.add(current_state)
+        i = i + 1
+    raise Exception("Searched the maze but did not find the goal")
+
 
 def uniformCostSearch(problem):
-    """Search the node of least total cost first."""
-    "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    startState = problem.getStartState()
+    s = PriorityQueue()
+    s.push((startState, []), 0)
+    visited = set()
+    while not s.isEmpty():
+        current_path = s.pop()
+        current_state = current_path[0]
+        path_to_curr_state = current_path[1]
+        if problem.isGoalState(current_state):
+            return path_to_curr_state
+        if current_state in visited:
+            continue
+        successors = problem.getSuccessors(current_state)
+        for successor in successors:
+            successor_state = successor[0]
+            successor_direction = successor[1]
+            new_directions = list(path_to_curr_state)
+            new_directions.append(successor_direction)
+            cost_to_successor = problem.getCostOfActions(new_directions)
+            s.update((successor_state, new_directions), cost_to_successor)
+        visited.add(current_state)
+    raise Exception("Searched the maze but did not find the goal")
 
 def nullHeuristic(state, problem=None):
     """
@@ -107,9 +171,29 @@ def nullHeuristic(state, problem=None):
     return 0
 
 def aStarSearch(problem, heuristic=nullHeuristic):
-    """Search the node that has the lowest combined cost and heuristic first."""
-    "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    startState = problem.getStartState()
+    s = PriorityQueue()
+    start_state_h = heuristic(startState, problem)
+    s.push((startState, []), start_state_h)
+    visited = set()
+    while not s.isEmpty():
+        current_path = s.pop()
+        current_state = current_path[0]
+        path_to_curr_state = current_path[1]
+        if problem.isGoalState(current_state):
+            return path_to_curr_state
+        if current_state in visited:
+            continue
+        successors = problem.getSuccessors(current_state)
+        for successor in successors:
+            successor_state = successor[0]
+            successor_direction = successor[1]
+            new_directions = list(path_to_curr_state)
+            new_directions.append(successor_direction)
+            cost_to_successor = problem.getCostOfActions(new_directions) + heuristic(successor_state, problem)
+            s.update((successor_state, new_directions), cost_to_successor)
+        visited.add(current_state)
+    raise Exception("Searched the maze but did not find the goal")
 
 
 # Abbreviations

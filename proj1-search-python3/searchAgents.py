@@ -302,16 +302,11 @@ def calc_linear_dist(seq):
 
 def get_min_distance(pos, points, fact):
     points_sorted = points
-    # points_sorteds = str(points_sorted)
-    # if points_sorteds not in fact:
     all_point_combinations = get_combos([Pnt(p) for p in points_sorted])
     for p in all_point_combinations:
         p.insert(0, Pnt(pos))
     seq_paths = [p for p in all_point_combinations]
     distances = [calc_linear_dist(d) for d in seq_paths]
-    #     fact[points_sorteds] = min(distances)
-    # else:
-    #     print (fact[points_sorteds])
     return min(distances)
 
 
@@ -319,11 +314,7 @@ def cornersHeuristic_old(position, problem, info={}):
     "The Manhattan distance heuristic for a PositionSearchProblem"
     corners = position[1]
     remaining_points = [corner[0] for corner in corners if corner[1] == False]
-    # remaining_points.append((position[0]))
     min_distance = get_min_distance(position[0], remaining_points, problem.fact)
-    print(position)
-    # min_reachable_corner_distance = min([get_euclidean_distance(position[0], corner) for corner in corners if corner[1] == False])
-    # total_distance = min_reachable_corner_distance + 3 * (problem.top - 1)
     return min_distance
 
 def euclideanHeuristic(position, problem, info={}):
@@ -533,8 +524,6 @@ def foodHeuristic(state, problem):
     problem.heuristicInfo['wallCount']
     """
     position, foodGrid = state
-    if position in problem.fact:
-        return problem.fact[position]
     if 'wallList' not in problem.heuristicInfo:
         problem.heuristicInfo['wallList'] = problem.walls.asList()
     wallList = problem.heuristicInfo['wallList']
@@ -544,22 +533,9 @@ def foodHeuristic(state, problem):
         total_wall_cost = total_wall_cost + get_euclidean_distance(w, position)
     foodList = foodGrid.asList()
     min_distance = 0
-    # if len(foodList) <= 7:
-    #     return get_min_distance(position, foodList, problem.fact)
-    # else:
     for f in foodList:
         total_food_cost = total_food_cost + get_manhattan_distance(f, position)
     return (total_food_cost / len(foodList)) if len(foodList) > 0 else 0
-    # min_distance = min([get_manhattan_distance(f, position) for f in foodList])
-    # print('position')
-    # print(position)
-    # print('foodGrid')
-    # print(foodGrid.asList())
-    # print (problem.walls.asList())
-    "*** YOUR CODE HERE ***"
-    # avg_food_cost = total_food_cost / len(foodList) if len(foodList) > 0 else 0
-    # avg_wall_cost = total_wall_cost / len(wallList) if len(wallList) > 0 else 1
-    problem.fact[position] = min_distance
     return min_distance
 
 class ClosestDotSearchAgent(SearchAgent):
@@ -589,7 +565,6 @@ class ClosestDotSearchAgent(SearchAgent):
         food = gameState.getFood()
         walls = gameState.getWalls()
         problem = AnyFoodSearchProblem(gameState)
-        directions = [Directions.EAST, Directions.WEST, Directions.NORTH, Directions.SOUTH]
         s = Queue()
         s.push((startPosition, []))
         visited = set()
@@ -646,7 +621,6 @@ class AnyFoodSearchProblem(PositionSearchProblem):
         complete the problem definition.
         """
         x,y = state
-        print (self.food.asList())
         if state in self.food.asList():
             return True
         else:

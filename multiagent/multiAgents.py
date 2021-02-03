@@ -51,6 +51,48 @@ class ReflexAgent(Agent):
 
         return legalMoves[chosenIndex]
 
+    def lg(self, k,v):
+        log=True
+        if log:
+            print("{k}={v}".format(k=k, v=v))
+
+    def get_manhattan_distance(self, xy1, xy2):
+        return abs(xy1[0] - xy2[0]) + abs(xy1[1] - xy2[1])
+
+    def get_euclidean_distance(self, xy1, xy2):
+        return ((xy1[0] - xy2[0]) ** 2 + (xy1[1] - xy2[1]) ** 2) ** 0.5
+
+    def mean(self, ls):
+        return sum(ls)/len(ls) if len(ls) > 0 else 0
+
+    def scoreOnPosFoodGhost(self, position, foodGrid, ghostPos):
+        # total_wall_cost = 1
+        total_food_cost = 0
+        # for w in wallList:
+        #     total_wall_cost = total_wall_cost + self.get_euclidean_distance(w, position)
+        foodList = foodGrid.asList()
+        food_distances = [self.get_manhattan_distance(f, position) for f in foodList]
+        food_distances.sort(reverse=True)
+        factor = 1
+
+        for f in food_distances:
+            total_food_cost = total_food_cost + (f*factor)
+            factor = factor * 10
+
+        total_ghost_pos = 0.0
+        min_ghost_dist = 9999
+        for gp in ghostPos:
+            ghost_dist = self.get_manhattan_distance(gp, position)
+            min_ghost_dist = min(min_ghost_dist, ghost_dist)
+            total_ghost_pos = total_ghost_pos + ghost_dist
+        # total_ghost_pos = (total_ghost_pos * len(foodList) )**3
+        self.lg("total_food_cost",total_food_cost)
+        self.lg("total_ghost_pos",total_ghost_pos)
+        if total_food_cost == 0:
+            return 99999999999
+        # return 10
+        return (1/total_food_cost)*100 if min_ghost_dist > 1 else -1
+
     def evaluationFunction(self, currentGameState, action):
         """
         Design a better evaluation function here.
@@ -67,14 +109,27 @@ class ReflexAgent(Agent):
         to create a masterful evaluation function.
         """
         # Useful information you can extract from a GameState (pacman.py)
+        self.lg("currentGameState",currentGameState)
+        self.lg("action",action)
+
         successorGameState = currentGameState.generatePacmanSuccessor(action)
+        self.lg("successorGameState",successorGameState)
         newPos = successorGameState.getPacmanPosition()
+        self.lg("newPos",newPos)
         newFood = successorGameState.getFood()
+        self.lg("newFood",newFood)
+
         newGhostStates = successorGameState.getGhostStates()
+        gs = [ghostState for ghostState in newGhostStates]
+        self.lg("gs",str(gs))
         newScaredTimes = [ghostState.scaredTimer for ghostState in newGhostStates]
+        self.lg("newScaredTimes",newScaredTimes)
+
 
         "*** YOUR CODE HERE ***"
-        return successorGameState.getScore()
+        score = self.scoreOnPosFoodGhost(newPos, newFood, successorGameState.getGhostPositions())
+        self.lg("score", score)
+        return score
 
 def scoreEvaluationFunction(currentGameState):
     """
@@ -110,6 +165,54 @@ class MinimaxAgent(MultiAgentSearchAgent):
     """
     Your minimax agent (question 2)
     """
+    def lg(self, k,v):
+        log=True
+        if log:
+            print("{k}={v}".format(k=k, v=v))
+
+    def max_val(self, gameState, depth, agentIndex):
+        v = float('-inf')
+        for action in gameState.getLegalActions(agentIndex):
+            gs = gameState.generateSuccessor(agentIndex, action)
+            depth, newAgentIndex = self.get_new_agent(agentIndex, depth, gameState)
+            curr_val = self.val(gs, depth, newAgentIndex)
+            v = max(v, curr_val)
+        return v
+
+        #
+        # successor_states = [gameState.generateSuccessor(agentIndex, action) for action
+        #                     in gameState.getLegalActions(agentIndex)]
+        # return max([self.val(ss, depth, 1) for ss in successor_states])
+
+    def min_val(self, gameState, depth, agentIndex):
+        # self.lg('agentIndex', agentIndex)
+        # self.lg('gameState.getLegalActions(agentIndex)', gameState.getLegalActions(agentIndex))
+        v = float('inf')
+        for action in gameState.getLegalActions(agentIndex):
+            gs = gameState.generateSuccessor(agentIndex, action)
+            depth, newAgentIndex = self.get_new_agent(agentIndex, depth, gameState)
+            curr_val = self.val(gs, depth, newAgentIndex)
+            v = min(v, curr_val)
+        return v
+
+    def get_new_agent(self, agentIndex, depth, gameState):
+        newAgentIndex = agentIndex + 1
+        if gameState.getNumAgents() == newAgentIndex:
+            newAgentIndex = 0
+        if newAgentIndex == 0:
+            depth = depth + 1
+        return depth, newAgentIndex
+
+    def val(self, gameState, depth, agentIndex):
+        if gameState.isWin() or gameState.isLose() or depth > self.depth:
+            return self.evaluationFunction(gameState)
+        if agentIndex == 0:
+            max_value = self.max_val(gameState, depth, agentIndex)
+            return max_value
+        else:
+            min_value = self.min_val(gameState, depth, agentIndex)
+            return min_value
+
 
     def getAction(self, gameState):
         """
@@ -135,7 +238,17 @@ class MinimaxAgent(MultiAgentSearchAgent):
         Returns whether or not the game state is a losing state
         """
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+
+        nextActions = [(g, self.val(gameState, 0, 0)) for g in gameState.getLegalActions(0)]
+        # self.lg('nextActions', nextActions)
+        min_util = float('inf')
+        if len(nextActions) > 0:
+            min_util = min([a[1] for a in nextActions])
+        # self.lg('min_util', min_util)
+        for a in nextActions:
+            if a[1] == min_util:
+                return a[0]
+        raise Exception("shud not reach here")
 
 class AlphaBetaAgent(MultiAgentSearchAgent):
     """

@@ -51,19 +51,10 @@ class ReflexAgent(Agent):
 
         return legalMoves[chosenIndex]
 
-    def get_manhattan_distance(self, xy1, xy2):
-        return abs(xy1[0] - xy2[0]) + abs(xy1[1] - xy2[1])
-
-    def get_euclidean_distance(self, xy1, xy2):
-        return ((xy1[0] - xy2[0]) ** 2 + (xy1[1] - xy2[1]) ** 2) ** 0.5
-
-    def mean(self, ls):
-        return sum(ls)/len(ls) if len(ls) > 0 else 0
-
     def scoreOnPosFoodGhost(self, position, foodGrid, ghostPos):
         total_food_cost = 0
         foodList = foodGrid.asList()
-        food_distances = [self.get_manhattan_distance(f, position) for f in foodList]
+        food_distances = [get_manhattan_distance(f, position) for f in foodList]
         food_distances.sort(reverse=True)
         factor = 1
 
@@ -74,7 +65,7 @@ class ReflexAgent(Agent):
         total_ghost_pos = 0.0
         min_ghost_dist = 9999
         for gp in ghostPos:
-            ghost_dist = self.get_manhattan_distance(gp, position)
+            ghost_dist = get_manhattan_distance(gp, position)
             min_ghost_dist = min(min_ghost_dist, ghost_dist)
             total_ghost_pos = total_ghost_pos + ghost_dist
         if total_food_cost == 0:
@@ -126,6 +117,8 @@ def lg(k,v):
         print("{k}={v}".format(k=k, v=str(v)))
 
 class MinimaxAgent(MultiAgentSearchAgent):
+    # TODO someday Vikrant Bhosale to add more comments and fix this messy code. Add unit tests
+
     def max_val(self, gameState, depth, agentIndex):
         v = float('-inf')
         new_depth, newAgentIndex = self.get_new_agent(agentIndex, depth, gameState)
@@ -156,7 +149,7 @@ class MinimaxAgent(MultiAgentSearchAgent):
         return depth, newAgentIndex
 
     def val(self, agentIndex, depth, gameState):
-        if gameState.isWin() or gameState.isLose() or depth >= self.depth+1:
+        if gameState.isWin() or gameState.isLose() or depth >= self.depth:
             return self.evaluationFunction(gameState)
         if agentIndex == 0:
             max_value = self.max_val(gameState, depth, agentIndex)
@@ -180,6 +173,8 @@ class MinimaxAgent(MultiAgentSearchAgent):
         return action
 
 class AlphaBetaAgent(MultiAgentSearchAgent):
+    # TODO Vikrant Bhosale to add more comments and fix this messy code
+
     def max_val(self, gameState, depth, agentIndex, alpha, beta):
         v = float("-inf")
         for newState in gameState.getLegalActions(agentIndex):
@@ -234,6 +229,7 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
         return action
 
 class ExpectimaxAgent(MultiAgentSearchAgent):
+    # TODO Vikrant Bhosale to add more comments
 
     def get_new_agent(self, agentIndex, depth, gameState):
         newAgentIndex = agentIndex + 1
@@ -284,61 +280,29 @@ def get_manhattan_distance(xy1, xy2):
 def get_euclidean_distance(xy1, xy2):
     return ((xy1[0] - xy2[0]) ** 2 + (xy1[1] - xy2[1]) ** 2) ** 0.5
 
-def scoreOnPosFoodGhost(position, foodGrid, ghostPos, gameState):
-    import random
-    # total_wall_cost = 1
-    total_food_cost = 0
-    # for w in wallList:
-    #     total_wall_cost = total_wall_cost + self.get_euclidean_distance(w, position)
-    foodList = foodGrid.asList()
-    food_distances = [get_manhattan_distance(f, position) for f in foodList]
-    food_distances.sort(reverse=True)
-    factor = 1
-
-    for f in food_distances:
-        total_food_cost = total_food_cost + (f*factor)
-        factor = factor * 10
-
-    total_ghost_pos = 0.0
-    min_ghost_dist = float('inf')
-    for gp in ghostPos:
-        ghost_dist = get_manhattan_distance(gp, position)
-        min_ghost_dist = min(min_ghost_dist, ghost_dist)
-        total_ghost_pos = total_ghost_pos + ghost_dist
-    # total_ghost_pos = (total_ghost_pos * len(foodList) )**3
-    lg("total_food_cost",total_food_cost)
-    lg("total_ghost_pos",total_ghost_pos)
-    if total_food_cost == 0:
-        return float('inf')
-    capsules = gameState.getCapsules()
-    min_capsule_dist = float('inf')
-    for gp in capsules:
-        cap_dist = get_euclidean_distance(gp, position)
-        min_capsule_dist = min(min_capsule_dist, cap_dist)
-
-    if min_ghost_dist <= 1:
-        return float('-inf')
-
-    if min_capsule_dist <= 1:
-        if random.randint(1, 4) == 3:
-            return float('inf')
-
-    return (1 / float(total_food_cost))
-
-def betterEvaluationFunction1(currentGameState):
-    newPos = currentGameState.getPacmanPosition()
-    newFood = currentGameState.getFood()
-    newFoodList = newFood.asList()
-    ghost_pos = currentGameState.getGhostPositions()
-
-    return scoreOnPosFoodGhost(newPos, newFood, ghost_pos, currentGameState)
-
 def betterEvaluationFunction(currentGameState):
+    '''
+    There are several things considered here
+    First, we consider the food positions available and we incentivise
+    the pacman to grab the nearest food first. We do it like for 4 nearest foods sorted.
+    As beyond that it doesnt look more relevant in these examples.
+
+    Next we also consider the min ghost distance, if there is atleast 1 ghost nearby,
+    we give a severe penalty of negative infinity.
+
+    Then we also see how many capsules are remaining and provide that as a negative incentive
+    We want to really really make it an easy decision for the pacman to eat the capsule if it is right next to it.
+    Hence just looking at the counts and not the distance from capsule, else the pacman would be incentivised to move
+    closer to the capsule, which is not my intention.
+
+    last, thing I am adding a bit of a randomization so that in case of ties, the pacman doesnt stay
+    at the same position for long in case of ties and moves on in his life.
+
+    '''
     import random
     newPos = currentGameState.getPacmanPosition()
     newFood = currentGameState.getFood()
     newFoodList = newFood.asList()
-    min_food_distance = -1
 
     food_distances = [get_manhattan_distance(f, newPos) for f in newFoodList]
     food_distances.sort(reverse=True)
@@ -349,40 +313,19 @@ def betterEvaluationFunction(currentGameState):
         total_food_cost = total_food_cost + (f*factor)
         factor = factor * 2
 
-
-    for food in newFoodList:
-        distance = util.manhattanDistance(newPos, food)
-        if min_food_distance >= distance or min_food_distance == -1:
-            min_food_distance = distance
-
-    distances_to_ghosts = 1
-    proximity_to_ghosts = 0
     min_ghost_dist = float('inf')
     for ghost_state in currentGameState.getGhostPositions():
-        distance = util.manhattanDistance(newPos, ghost_state)
+        distance = get_manhattan_distance(newPos, ghost_state)
         min_ghost_dist = min(min_ghost_dist, distance)
-        distances_to_ghosts += distance
-        if distance <= 1:
-            proximity_to_ghosts += 1
 
-    """Obtaining the number of capsules available"""
     newCapsule = currentGameState.getCapsules()
     numberOfCapsules = len(newCapsule)
 
     if min_ghost_dist <= 1:
         return float('-inf')
     """Combination of the above calculated metrics."""
-    return currentGameState.getScore()*2 + (1 / float(total_food_cost if total_food_cost > 0 else 1)) - proximity_to_ghosts - numberOfCapsules + 1/random.randint(1,3)
-
-def betterEvaluationFunction1(currentGameState):
-    """
-    Your extreme ghost-hunting, pellet-nabbing, food-gobbling, unstoppable
-    evaluation function (question 5).
-
-    DESCRIPTION: <write something here so we know what you did>
-    """
-    "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    return currentGameState.getScore()*2 + (1 / float(total_food_cost if total_food_cost > 0 else 1)) - \
+         numberOfCapsules**5 + 1/random.randint(1,3)
 
 # Abbreviation
 better = betterEvaluationFunction
